@@ -20,6 +20,12 @@ class NoteScreenState extends State<NoteScreen> {
   final _formKey = GlobalKey<FormState>();
   bool isEnabled = false;
 
+  bool _isFavorite = false;
+
+  String _listTitle = 'Mes Notes';
+
+  var _isVisible = true;
+
   @override
   void initState() {
     super.initState();
@@ -30,45 +36,58 @@ class NoteScreenState extends State<NoteScreen> {
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-      appBar: AppBar(
-          elevation: 4,
-          title: Text(
-            'Appli de prise notes',
-            textAlign: TextAlign.center,
+        appBar: AppBar(
+            elevation: 4,
+            title: Text(
+              'Appli de prise notes',
+              textAlign: TextAlign.center,
+            ),
+            actions: <Widget>[
+              IconButton(
+                icon:
+                    Icon(_isFavorite ? Icons.favorite : Icons.favorite_border),
+                tooltip: 'Notes favorites',
+                onPressed: () {
+                  setState(() {
+                    _isFavorite = !_isFavorite;
+                    _updateView();
+                  });
+                },
+              ),
+            ]),
+        bottomNavigationBar: BottomNavigationBar(
+            elevation: 8,
+            selectedItemColor: Colors.deepPurple,
+            backgroundColor: Colors.white70,
+            onTap: (index) {
+              _onTabTapped(index);
+              _updateView();
+            },
+            // new
+            currentIndex: _currentIndex,
+            // ne
+            items: [
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.list), title: Text('Mes notes')),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.archive),
+                title: Text('Archivées'),
+              ),
+            ]),
+        body: _noteListWidget(_currentIndex),
+        floatingActionButton: Visibility(
+
+          visible: _isVisible,
+          child: FloatingActionButton(
+            elevation: 4,
+            onPressed: () {
+              // ignore: unnecessary_statements
+              _addCourse();
+            },
+            child: Icon(Icons.add),
+            backgroundColor: Colors.deepPurpleAccent,
           ),
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.favorite),
-              tooltip: 'Turn on dark mode',
-              onPressed: () {
-                setState(() {});
-              },
-            ),
-          ]),
-      bottomNavigationBar: BottomNavigationBar(
-          onTap: (index) {
-            _onTabTapped(index);
-            _updateView();
-          }, // new
-          currentIndex: _currentIndex, // ne
-          items: [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.list), title: Text('Mes notes')),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.archive),
-              title: Text('Archivées'),
-            ),
-          ]),
-      body: _noteListWidget(_currentIndex),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // ignore: unnecessary_statements
-          _addCourse();
-        },
-        child: Icon(Icons.add),
-        backgroundColor: Colors.greenAccent,
-      ),
-    );
+        ));
   }
 
   void changeMode(value) {
@@ -122,7 +141,7 @@ class NoteScreenState extends State<NoteScreen> {
                   }
                 },
                 child: Text('Valider'),
-                textColor: Colors.greenAccent,
+                textColor: Colors.deepPurpleAccent,
               )
             ],
           );
@@ -135,7 +154,7 @@ class NoteScreenState extends State<NoteScreen> {
         child: ListBody(
           children: <Widget>[
             TextFormField(
-              cursorColor: Colors.greenAccent,
+              cursorColor: Colors.deepPurpleAccent,
               controller: _titleController,
               validator: (value) => validateField(value, 'Entrer un titre'),
               decoration: InputDecoration(
@@ -143,7 +162,7 @@ class NoteScreenState extends State<NoteScreen> {
                   hintText: 'Saisir le titre de la note'),
             ),
             TextFormField(
-              cursorColor: Colors.greenAccent,
+              cursorColor: Colors.deepPurpleAccent,
               controller: _contentController,
               validator: (value) =>
                   validateField(value, 'Entrer une description'),
@@ -163,12 +182,24 @@ class NoteScreenState extends State<NoteScreen> {
   ///
   /// Update view depending to the current bottom menu item
   void _updateView() {
+    if (_isFavorite) {
+      _listTitle = 'Notes Favorites';
+      _repository.getNotes().then((notes) {
+        _notes.clear();
+        _notes.addAll(notes.where((note) => note.isFavorite == 1));
+      });
+      return;
+    }
     if (_currentIndex == 0) {
+      _isVisible = true;
+      _listTitle = 'Dernières Notes';
       _repository.getNotes().then((notes) {
         _notes.clear();
         _notes.addAll(notes.where((note) => note.isArchived == 0));
       });
     } else if (_currentIndex == 1) {
+      _isVisible = false;
+      _listTitle = 'Notes Archivées';
       _repository.getArchivedNotes().then((notes) {
         _notes.clear();
         _notes.addAll(notes);
@@ -192,9 +223,7 @@ class NoteScreenState extends State<NoteScreen> {
                 padding: EdgeInsets.all(8.0),
                 child: Text(
                   // Adaptez le titre selon la vue active
-                  index == 0
-                      ? 'Vos dernières notes'.toUpperCase()
-                      : 'Notes archivées'.toUpperCase(),
+                  _listTitle.toUpperCase(),
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
                 ),
               ),
@@ -255,12 +284,17 @@ class NoteScreenState extends State<NoteScreen> {
 
   Widget _listTileItem(Note note, context) {
     final bool alreadyArchived = note.isArchived == 1;
+    final bool isFavorite = note.isFavorite == 1;
     var _listTileFont = alreadyArchived
         ? TextStyle(decoration: TextDecoration.lineThrough)
         : TextStyle(decoration: TextDecoration.none);
+    var noteContent = note.content;
     return Dismissible(
       key: Key(note.id.toString()),
       child: Card(
+        elevation: 8,
+        shadowColor: Colors.grey,
+        margin: EdgeInsets.all(8.0),
         child: ListTile(
           contentPadding: EdgeInsets.all(5.0),
           title: Text(
@@ -268,16 +302,32 @@ class NoteScreenState extends State<NoteScreen> {
             style: _listTileFont,
           ),
           leading: IconButton(
-            icon: Icon(Icons.favorite_border),
+            icon:
+                isFavorite ? Icon(Icons.favorite) : Icon(Icons.favorite_border),
             onPressed: () {
-
+              setState(() {
+                //Change note status
+                note.isFavorite = note.isFavorite == 1 ? 0 : 1;
+                _repository.update(note).then((value) {
+                  setState(() {
+                    showFavoriteSnackBar(context, isFavorite);
+                  });
+                }).catchError((onError) {
+                  print('${onError.toString()}');
+                });
+              });
             },
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
+              Divider(
+                color: Colors.grey,
+              ),
               Text(
-                note.content,
+                noteContent.length >= 120
+                    ? '${noteContent.substring(0, 100)}... Voir plus'
+                    : noteContent,
                 textAlign: TextAlign.justify,
               ),
               Divider(
@@ -307,23 +357,52 @@ class NoteScreenState extends State<NoteScreen> {
           log(note.toString());
           _repository.update(note).then((value) {
             setState(() {
-              showSnackBar(context, alreadyArchived);
+              showArchivedSnackBar(context, alreadyArchived);
             });
           }).catchError((onError) {
             print('${onError.toString()}');
           });
         });
       },
-      background: Container(color: Colors.greenAccent),
+      background: Container(color: Colors.deepPurpleAccent),
     );
   }
 
-  void showSnackBar(context, bool alreadyArchived) {
+  void showFavoriteSnackBar(context, bool isFavorite) {
     var textStyle = TextStyle(color: Colors.black);
     final snackBar = Flushbar(
       margin: EdgeInsets.only(left: 8, right: 8, bottom: 16),
       borderRadius: 8,
-      backgroundColor: Colors.greenAccent,
+      backgroundColor: Colors.deepPurpleAccent,
+      duration: Duration(seconds: 3),
+      messageText: isFavorite
+          ? Text(
+              'Note supprimée des favoris avec succès',
+              style: textStyle,
+            )
+          : Text(
+              'Note ajoutée au favoris avec succès',
+              style: textStyle,
+            ),
+      mainButton: FlatButton(
+        child: Text('Annuler'),
+        onPressed: () {
+          // Some code to undo the change.
+        },
+      ),
+    );
+
+    // Find the Scaffold in the widget tree and use
+    // it to show a SnackBar.
+    snackBar.show(context);
+  }
+
+  void showArchivedSnackBar(context, bool alreadyArchived) {
+    var textStyle = TextStyle(color: Colors.black);
+    final snackBar = Flushbar(
+      margin: EdgeInsets.only(left: 8, right: 8, bottom: 16),
+      borderRadius: 8,
+      backgroundColor: Colors.deepPurpleAccent,
       duration: Duration(seconds: 3),
       messageText: alreadyArchived
           ? Text(
@@ -358,7 +437,12 @@ class NoteScreenState extends State<NoteScreen> {
             content: Text('Voulez-vous supprimer cette note?'),
             actions: <Widget>[
               FlatButton(
-                child: Text('Annuler'),
+                child: Text(
+                  'Annuler',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                  ),
+                ),
                 onPressed: () {
                   closeWindow(context);
                 },
@@ -375,7 +459,7 @@ class NoteScreenState extends State<NoteScreen> {
                 child: Text(
                   'Oui',
                 ),
-                textColor: Colors.greenAccent,
+                textColor: Colors.deepPurpleAccent,
               ),
             ],
           );
@@ -395,6 +479,7 @@ class NoteScreenState extends State<NoteScreen> {
 
   void _onTabTapped(int index) {
     setState(() {
+      _isFavorite = false;
       _currentIndex = index;
     });
   }
@@ -410,6 +495,7 @@ class NoteDetailsScreen extends StatefulWidget {
 }
 
 class NoteDetailsScreenState extends State<NoteDetailsScreen> {
+  NoteRepository _noteRepository;
   bool _keyBoardEnabled = true;
   final myController = TextEditingController();
   FocusNode _myFocusNode;
@@ -417,7 +503,7 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
   @override
   void initState() {
     super.initState();
-
+    _noteRepository = NoteRepository();
     _myFocusNode = FocusNode();
   }
 
@@ -425,7 +511,7 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
   void dispose() {
     // Clean up the focus node when the Form is disposed.
     _myFocusNode.dispose();
-
+    _noteRepository = null;
     super.dispose();
   }
 
@@ -456,11 +542,15 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
             },
           ),
           PopupMenuButton(
-            itemBuilder: (BuildContext context) {
+            itemBuilder: (BuildContext _) {
               return [
                 PopupMenuItem(
                     child: FlatButton.icon(
-                        onPressed: () {},
+                        onPressed: () {
+                          _noteRepository.delete(widget.note).then((value) {
+                            Navigator.of(context).pop();
+                          });
+                        },
                         icon: const Icon(Icons.delete),
                         label: Text('Supprimer'))),
                 PopupMenuItem(
@@ -478,9 +568,10 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
   }
 
   Widget noteDetailsWidget() {
+    var noteDate = 'Editée le ${formatDate(parseDate(widget.note.date))}';
     return Container(
       padding: EdgeInsets.only(left: 8.0, right: 8.0),
-      margin: EdgeInsets.only(left: 8.0, right: 8.0),
+      margin: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
       child: SingleChildScrollView(
           child: ListBody(children: <Widget>[
         Row(
@@ -490,7 +581,11 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
               widget.note.title,
               style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
             ),
-            Text(formatDate(parseDate(widget.note.date))),
+            Text(
+              noteDate,
+              style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.normal),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
         Divider(

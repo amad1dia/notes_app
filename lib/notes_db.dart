@@ -10,10 +10,10 @@ class Note {
   String title;
   String content;
   int isArchived;
-
+  int isFavorite;
   String date;
 
-  Note({this.id, this.title, this.content, this.isArchived = 0, this.date});
+  Note({this.id, this.title, this.content, this.isArchived = 0, this.date, this.isFavorite =0});
 
   Map<String, dynamic> toMap() {
     return {
@@ -21,7 +21,8 @@ class Note {
       'title': title,
       'content': content,
       'isArchived': isArchived,
-      'date': date
+      'date': date,
+      'isFavorite': isFavorite,
     };
   }
 
@@ -33,6 +34,7 @@ class Note {
         'title : $title, '
         'content : $content, '
         'date : $date '
+        'isFavorite: $isFavorite'
         '}';
   }
 }
@@ -67,6 +69,7 @@ class NoteRepository {
         content: maps[i]['content'],
         isArchived: maps[i]['isArchived'],
         date: maps[i]['date'],
+        isFavorite: maps[i]['isFavorite'],
       );
     });
   }
@@ -111,7 +114,7 @@ class NoteDBHelper {
         // When the database is first created, create a table to store dogs.
         onCreate: _createDb,
         onUpgrade: _onUpgrade,
-        version: 8);
+        version: 9);
     return noteDatabase;
   }
 
@@ -122,6 +125,7 @@ class NoteDBHelper {
           "title TEXT,"
           "content TEXT,"
           "isArchived INTEGER,"
+          "isFavorite INTEGER,"
           "date TEXT"
           ")",
     );
