@@ -76,7 +76,6 @@ class NoteScreenState extends State<NoteScreen> {
             ]),
         body: _noteListWidget(_currentIndex),
         floatingActionButton: Visibility(
-
           visible: _isVisible,
           child: FloatingActionButton(
             elevation: 4,
@@ -293,7 +292,6 @@ class NoteScreenState extends State<NoteScreen> {
       key: Key(note.id.toString()),
       child: Card(
         elevation: 8,
-        shadowColor: Colors.grey,
         margin: EdgeInsets.all(8.0),
         child: ListTile(
           contentPadding: EdgeInsets.all(5.0),
@@ -329,6 +327,7 @@ class NoteScreenState extends State<NoteScreen> {
                     ? '${noteContent.substring(0, 100)}... Voir plus'
                     : noteContent,
                 textAlign: TextAlign.justify,
+//                style: TextStyle(color: Colors.black54),
               ),
               Divider(
                 color: Colors.grey,
@@ -336,7 +335,7 @@ class NoteScreenState extends State<NoteScreen> {
               Text(
                 note.date == null
                     ? 'No date'
-                    : formatDate(parseDate(note.date)),
+                    : 'Editée le ${formatDate(parseDate(note.date))}',
                 style: TextStyle(fontStyle: FontStyle.italic),
                 textAlign: TextAlign.end,
               )
@@ -369,11 +368,11 @@ class NoteScreenState extends State<NoteScreen> {
   }
 
   void showFavoriteSnackBar(context, bool isFavorite) {
-    var textStyle = TextStyle(color: Colors.black);
+    var textStyle = TextStyle(color: Colors.white);
     final snackBar = Flushbar(
-      margin: EdgeInsets.only(left: 8, right: 8, bottom: 16),
-      borderRadius: 8,
-      backgroundColor: Colors.deepPurpleAccent,
+      margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
+      borderRadius: 4,
+      backgroundColor: Colors.black54,
       duration: Duration(seconds: 3),
       messageText: isFavorite
           ? Text(
@@ -398,11 +397,11 @@ class NoteScreenState extends State<NoteScreen> {
   }
 
   void showArchivedSnackBar(context, bool alreadyArchived) {
-    var textStyle = TextStyle(color: Colors.black);
+    var textStyle = TextStyle(color: Colors.white);
     final snackBar = Flushbar(
-      margin: EdgeInsets.only(left: 8, right: 8, bottom: 16),
-      borderRadius: 8,
-      backgroundColor: Colors.deepPurpleAccent,
+      margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
+      borderRadius: 4,
+      backgroundColor: Colors.black54,
       duration: Duration(seconds: 3),
       messageText: alreadyArchived
           ? Text(
@@ -531,9 +530,7 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
         elevation: 1.0,
         actions: <Widget>[
           IconButton(
-            icon: const Icon(
-              Icons.edit,
-            ),
+            icon: Icon(_keyBoardEnabled ? Icons.edit : Icons.done),
             onPressed: () {
               setState(() {
                 _keyBoardEnabled = !_keyBoardEnabled;
@@ -568,7 +565,8 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
   }
 
   Widget noteDetailsWidget() {
-    var noteDate = 'Editée le ${formatDate(parseDate(widget.note.date))}';
+    Note note = widget.note;
+    var noteDate = 'Editée le ${formatDate(parseDate(note.date))}';
     return Container(
       padding: EdgeInsets.only(left: 8.0, right: 8.0),
       margin: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
@@ -578,7 +576,7 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Text(
-              widget.note.title,
+              note.title,
               style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
             ),
             Text(
@@ -592,7 +590,7 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
           color: Colors.grey,
         ),
         TextFormField(
-          initialValue: widget.note.content,
+          initialValue: note.content,
           maxLines: _keyBoardEnabled ? null : 6,
           readOnly: _keyBoardEnabled,
           focusNode: _myFocusNode,
@@ -601,9 +599,10 @@ class NoteDetailsScreenState extends State<NoteDetailsScreen> {
           style: TextStyle(
             fontSize: 16.0,
           ),
-          onChanged: (String e) {
+          onChanged: (String value) {
             setState(() {
-              print('\n'.allMatches(e));
+              note.content = value;
+              _noteRepository.update(note);
             });
           },
         ),
