@@ -4,6 +4,7 @@ import 'package:flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 
 import 'notes_db.dart';
+import 'notes_details.dart';
 import 'utils.dart';
 
 class NoteScreen extends StatefulWidget {
@@ -44,6 +45,13 @@ class NoteScreenState extends State<NoteScreen> {
             ),
             actions: <Widget>[
               IconButton(
+                icon: Icon(Icons.search),
+                onPressed: () {
+                  showSearch(
+                      context: context, delegate: NoteSearch(notes: _notes));
+                },
+              ),
+              IconButton(
                 icon:
                     Icon(_isFavorite ? Icons.favorite : Icons.favorite_border),
                 tooltip: 'Notes favorites',
@@ -56,9 +64,8 @@ class NoteScreenState extends State<NoteScreen> {
               ),
             ]),
         bottomNavigationBar: BottomNavigationBar(
-            elevation: 8,
+            elevation: 4,
             selectedItemColor: Colors.deepPurple,
-            backgroundColor: Colors.white70,
             onTap: (index) {
               _onTabTapped(index);
               _updateView();
@@ -81,7 +88,7 @@ class NoteScreenState extends State<NoteScreen> {
             elevation: 4,
             onPressed: () {
               // ignore: unnecessary_statements
-              _addCourse();
+              _addNote(context);
             },
             child: Icon(Icons.add),
             backgroundColor: Colors.deepPurpleAccent,
@@ -104,7 +111,7 @@ class NoteScreenState extends State<NoteScreen> {
     super.dispose();
   }
 
-  _addCourse() {
+  _addNote(BuildContext context) {
     return showDialog(
         context: context,
         builder: (context) {
@@ -259,7 +266,7 @@ class NoteScreenState extends State<NoteScreen> {
         });
   }
 
-  Widget _gridViewWidget() {
+/*  Widget _gridViewWidget() {
     return GridView.count(
       // Create a grid with 2 columns. If you change the scrollDirection to
       // horizontal, this produces 2 rows.
@@ -272,81 +279,22 @@ class NoteScreenState extends State<NoteScreen> {
         );
       }),
     );
-  }
+  }*/
 
   Widget listViewWidget() {
     return ListView.separated(
-        itemBuilder: (context, index) => _listTileItem(_notes[index], context),
+        itemBuilder: (context, index) => _listItem(_notes[index], context),
         separatorBuilder: (_, index) => const Divider(height: 1.0),
         itemCount: _notes.length);
   }
 
-  Widget _listTileItem(Note note, context) {
-    final bool alreadyArchived = note.isArchived == 1;
-    final bool isFavorite = note.isFavorite == 1;
-    var _listTileFont = alreadyArchived
-        ? TextStyle(decoration: TextDecoration.lineThrough)
-        : TextStyle(decoration: TextDecoration.none);
-    var noteContent = note.content;
+  Widget _listItem(Note note, context) {
     return Dismissible(
       key: Key(note.id.toString()),
       child: Card(
         elevation: 8,
         margin: EdgeInsets.all(8.0),
-        child: ListTile(
-          contentPadding: EdgeInsets.all(5.0),
-          title: Text(
-            note.title,
-            style: _listTileFont,
-          ),
-          leading: IconButton(
-            icon:
-                isFavorite ? Icon(Icons.favorite) : Icon(Icons.favorite_border),
-            onPressed: () {
-              setState(() {
-                //Change note status
-                note.isFavorite = note.isFavorite == 1 ? 0 : 1;
-                _repository.update(note).then((value) {
-                  setState(() {
-                    showFavoriteSnackBar(context, isFavorite);
-                  });
-                }).catchError((onError) {
-                  print('${onError.toString()}');
-                });
-              });
-            },
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              Divider(
-                color: Colors.grey,
-              ),
-              Text(
-                noteContent.length >= 120
-                    ? '${noteContent.substring(0, 100)}... Voir plus'
-                    : noteContent,
-                textAlign: TextAlign.justify,
-//                style: TextStyle(color: Colors.black54),
-              ),
-              Divider(
-                color: Colors.grey,
-              ),
-              Text(
-                note.date == null
-                    ? 'No date'
-                    : 'Editée le ${formatDate(parseDate(note.date))}',
-                style: TextStyle(fontStyle: FontStyle.italic),
-                textAlign: TextAlign.end,
-              )
-            ],
-          ),
-          trailing: IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () => _deleteConfirmDialog(note),
-          ),
-          onTap: () => _showCourseDetails(note),
-        ),
+        child: listTile(note, context),
       ),
       onDismissed: (direction) {
         // Remove the item from the data source.
@@ -356,7 +304,7 @@ class NoteScreenState extends State<NoteScreen> {
           log(note.toString());
           _repository.update(note).then((value) {
             setState(() {
-              showArchivedSnackBar(context, alreadyArchived);
+              showArchivedSnackBar(context, note.isArchived == 0);
             });
           }).catchError((onError) {
             print('${onError.toString()}');
@@ -367,12 +315,73 @@ class NoteScreenState extends State<NoteScreen> {
     );
   }
 
+  ListTile listTile(Note note, context) {
+    final bool alreadyArchived = note.isArchived == 1;
+    final bool isFavorite = note.isFavorite == 1;
+
+    var listTileFont = alreadyArchived
+        ? TextStyle(decoration: TextDecoration.lineThrough)
+        : TextStyle(decoration: TextDecoration.none);
+    return ListTile(
+      contentPadding: EdgeInsets.all(5.0),
+      title: Text(
+        note.title,
+        style: listTileFont,
+      ),
+      leading: IconButton(
+        icon: isFavorite ? Icon(Icons.favorite) : Icon(Icons.favorite_border),
+        onPressed: () {
+          setState(() {
+            //Change note status
+            note.isFavorite = note.isFavorite == 1 ? 0 : 1;
+            _repository.update(note).then((value) {
+              setState(() {
+                showFavoriteSnackBar(context, isFavorite);
+              });
+            }).catchError((onError) {
+              print('${onError.toString()}');
+            });
+          });
+        },
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Divider(
+            color: Colors.grey,
+          ),
+          Text(
+            note.content.length >= 120
+                ? '${note.content.substring(0, 100)}... Voir plus'
+                : note.content,
+            textAlign: TextAlign.justify,
+//                style: TextStyle(color: Colors.black54),
+          ),
+          Divider(
+            color: Colors.grey,
+          ),
+          Text(
+            note.date == null
+                ? 'No date'
+                : 'Editée le ${formatDate(parseDate(note.date))}',
+            style: TextStyle(fontStyle: FontStyle.italic),
+            textAlign: TextAlign.end,
+          )
+        ],
+      ),
+      trailing: IconButton(
+        icon: Icon(Icons.delete),
+        onPressed: () => _deleteConfirmDialog(note, context),
+      ),
+      onTap: () => _showNoteDetails(note, context),
+    );
+  }
+
   void showFavoriteSnackBar(context, bool isFavorite) {
     var textStyle = TextStyle(color: Colors.white);
     final snackBar = Flushbar(
       margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
       borderRadius: 4,
-      backgroundColor: Colors.black54,
       duration: Duration(seconds: 3),
       messageText: isFavorite
           ? Text(
@@ -384,9 +393,10 @@ class NoteScreenState extends State<NoteScreen> {
               style: textStyle,
             ),
       mainButton: FlatButton(
+        color: Colors.white,
         child: Text('Annuler'),
         onPressed: () {
-          // Some code to undo the change.
+          // TODO Some code to undo the change.
         },
       ),
     );
@@ -401,7 +411,6 @@ class NoteScreenState extends State<NoteScreen> {
     final snackBar = Flushbar(
       margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
       borderRadius: 4,
-      backgroundColor: Colors.black54,
       duration: Duration(seconds: 3),
       messageText: alreadyArchived
           ? Text(
@@ -413,9 +422,12 @@ class NoteScreenState extends State<NoteScreen> {
               style: textStyle,
             ),
       mainButton: FlatButton(
-        child: Text('Annuler'),
+        color: Colors.white,
+        child: Text(
+          'Annuler',
+        ),
         onPressed: () {
-          // Some code to undo the change.
+          // TODO Some code to undo the change.
         },
       ),
     );
@@ -425,7 +437,7 @@ class NoteScreenState extends State<NoteScreen> {
     snackBar.show(context);
   }
 
-  _deleteConfirmDialog(Note note) {
+  _deleteConfirmDialog(Note note, BuildContext context) {
     return showDialog(
         context: context,
         builder: (context) {
@@ -469,13 +481,6 @@ class NoteScreenState extends State<NoteScreen> {
     Navigator.of(context).pop();
   }
 
-  void _showCourseDetails(Note note) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (BuildContext context) {
-      return NoteDetailsScreen(note);
-    }));
-  }
-
   void _onTabTapped(int index) {
     setState(() {
       _isFavorite = false;
@@ -484,129 +489,73 @@ class NoteScreenState extends State<NoteScreen> {
   }
 }
 
-class NoteDetailsScreen extends StatefulWidget {
-  final Note note;
-
-  NoteDetailsScreen(this.note);
-
-  @override
-  State<StatefulWidget> createState() => NoteDetailsScreenState();
+void _showNoteDetails(Note note, BuildContext context) {
+  Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (BuildContext context) {
+    return NoteDetailsScreen(note);
+  }));
 }
 
-class NoteDetailsScreenState extends State<NoteDetailsScreen> {
-  NoteRepository _noteRepository;
-  bool _keyBoardEnabled = true;
-  final myController = TextEditingController();
-  FocusNode _myFocusNode;
+class NoteSearch extends SearchDelegate<Note> {
+  List<Note> notes;
+
+  NoteSearch({this.notes});
 
   @override
-  void initState() {
-    super.initState();
-    _noteRepository = NoteRepository();
-    _myFocusNode = FocusNode();
-  }
-
-  @override
-  void dispose() {
-    // Clean up the focus node when the Form is disposed.
-    _myFocusNode.dispose();
-    _noteRepository = null;
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      resizeToAvoidBottomPadding: false,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+          icon: Icon(Icons.close),
           onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: Text("Details de la note"),
-        elevation: 1.0,
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(_keyBoardEnabled ? Icons.edit : Icons.done),
-            onPressed: () {
-              setState(() {
-                _keyBoardEnabled = !_keyBoardEnabled;
-                _myFocusNode.requestFocus();
-              });
-            },
-          ),
-          PopupMenuButton(
-            itemBuilder: (BuildContext _) {
-              return [
-                PopupMenuItem(
-                    child: FlatButton.icon(
-                        onPressed: () {
-                          _noteRepository.delete(widget.note).then((value) {
-                            Navigator.of(context).pop();
-                          });
-                        },
-                        icon: const Icon(Icons.delete),
-                        label: Text('Supprimer'))),
-                PopupMenuItem(
-                    child: FlatButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.archive),
-                        label: const Text('Archiver')))
-              ];
-            },
-          )
-        ],
-      ),
-      body: noteDetailsWidget(),
+            query = '';
+          })
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+        icon: Icon(Icons.arrow_back),
+        onPressed: () {
+          close(context, null);
+        });
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = [];
+    print(query);
+    results.addAll(notes
+        .where((n) => n.title.toLowerCase().contains(query.toLowerCase())));
+//    print(results);
+    return ListView.separated(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        var note = results[index];
+        return ListTile(
+          title: Text(note.title),
+          onTap: () => _showNoteDetails(note, context),
+        );
+      },
+      separatorBuilder: (_, index) => const Divider(height: 1.0),
     );
   }
 
-  Widget noteDetailsWidget() {
-    Note note = widget.note;
-    var noteDate = 'Editée le ${formatDate(parseDate(note.date))}';
-    return Container(
-      padding: EdgeInsets.only(left: 8.0, right: 8.0),
-      margin: EdgeInsets.only(left: 8.0, right: 8.0, top: 8.0),
-      child: SingleChildScrollView(
-          child: ListBody(children: <Widget>[
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              note.title,
-              style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              noteDate,
-              style: TextStyle(fontSize: 12.0, fontWeight: FontWeight.normal),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        Divider(
-          color: Colors.grey,
-        ),
-        TextFormField(
-          initialValue: note.content,
-          maxLines: _keyBoardEnabled ? null : 6,
-          readOnly: _keyBoardEnabled,
-          focusNode: _myFocusNode,
-          keyboardType: TextInputType.multiline,
-          scrollPadding: EdgeInsets.all(10.0),
-          style: TextStyle(
-            fontSize: 16.0,
-          ),
-          onChanged: (String value) {
-            setState(() {
-              note.content = value;
-              _noteRepository.update(note);
-            });
-          },
-        ),
-      ])),
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final results = [];
+    results.addAll(notes
+        .where((n) => n.title.toLowerCase().contains(query.toLowerCase())));
+//    print(results);
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        var note = results[index];
+        return ListTile(
+          title: Text(note.title, style: TextStyle(color: Colors.blue)),
+          onTap: () => _showNoteDetails(note, context),
+        );
+      },
     );
   }
 }

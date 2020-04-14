@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
       //Pass the repository to the view
       home: NoteScreen(),
       theme: ThemeData(
-        primaryColor: Colors.deepPurpleAccent,
+        primaryColor: Colors.white,
         brightness: Brightness.light,
       ),
     );
