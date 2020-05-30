@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
+import 'package:notes_app/src/custom_widget.dart';
 
 import 'notes_db.dart';
 import 'notes_details.dart';
@@ -44,6 +45,7 @@ class NoteScreenState extends State<NoteScreen> {
               textAlign: TextAlign.center,
             ),
             actions: <Widget>[
+              ThemeSwitch(),
               IconButton(
                 icon: Icon(Icons.search),
                 onPressed: () {
@@ -65,7 +67,7 @@ class NoteScreenState extends State<NoteScreen> {
             ]),
         bottomNavigationBar: BottomNavigationBar(
             elevation: 4,
-            selectedItemColor: Colors.deepPurple,
+            selectedItemColor: Theme.of(context).accentColor,
             onTap: (index) {
               _onTabTapped(index);
               _updateView();
@@ -91,7 +93,7 @@ class NoteScreenState extends State<NoteScreen> {
               _addNote(context);
             },
             child: Icon(Icons.add),
-            backgroundColor: Colors.deepPurpleAccent,
+            backgroundColor: Theme.of(context).accentColor,
           ),
         ));
   }
@@ -147,7 +149,7 @@ class NoteScreenState extends State<NoteScreen> {
                   }
                 },
                 child: Text('Valider'),
-                textColor: Colors.deepPurpleAccent,
+                textColor: Theme.of(context).accentColor,
               )
             ],
           );
@@ -160,7 +162,7 @@ class NoteScreenState extends State<NoteScreen> {
         child: ListBody(
           children: <Widget>[
             TextFormField(
-              cursorColor: Colors.deepPurpleAccent,
+              cursorColor: Theme.of(context).accentColor,
               controller: _titleController,
               validator: (value) => validateField(value, 'Entrer un titre'),
               decoration: InputDecoration(
@@ -168,7 +170,7 @@ class NoteScreenState extends State<NoteScreen> {
                   hintText: 'Saisir le titre de la note'),
             ),
             TextFormField(
-              cursorColor: Colors.deepPurpleAccent,
+              cursorColor: Theme.of(context).accentColor,
               controller: _contentController,
               validator: (value) =>
                   validateField(value, 'Entrer une description'),
@@ -192,7 +194,8 @@ class NoteScreenState extends State<NoteScreen> {
       _listTitle = 'Notes Favorites';
       _repository.getNotes().then((notes) {
         _notes.clear();
-        _notes.addAll(notes.where((note) => note.isFavorite == 1));
+        _notes.addAll(notes
+            .where((note) => note.isFavorite == 1 && note.isArchived == 0));
       });
       return;
     }
@@ -266,21 +269,6 @@ class NoteScreenState extends State<NoteScreen> {
         });
   }
 
-/*  Widget _gridViewWidget() {
-    return GridView.count(
-      // Create a grid with 2 columns. If you change the scrollDirection to
-      // horizontal, this produces 2 rows.
-      crossAxisCount: 2,
-      children: List.generate(_notes.length, (index) {
-        return Container(
-          padding: const EdgeInsets.all(8),
-          child: Text(_notes[index].title),
-          color: Colors.teal[400],
-        );
-      }),
-    );
-  }*/
-
   Widget listViewWidget() {
     return ListView.separated(
         itemBuilder: (context, index) => _listItem(_notes[index], context),
@@ -311,7 +299,7 @@ class NoteScreenState extends State<NoteScreen> {
           });
         });
       },
-      background: Container(color: Colors.deepPurpleAccent),
+      background: Container(color: Theme.of(context).accentColor),
     );
   }
 
@@ -393,7 +381,7 @@ class NoteScreenState extends State<NoteScreen> {
               style: textStyle,
             ),
       mainButton: FlatButton(
-        color: Colors.white,
+        color: Theme.of(context).primaryColor,
         child: Text('Annuler'),
         onPressed: () {
           // TODO Some code to undo the change.
@@ -407,7 +395,7 @@ class NoteScreenState extends State<NoteScreen> {
   }
 
   void showArchivedSnackBar(context, bool alreadyArchived) {
-    var textStyle = TextStyle(color: Colors.white);
+    var textStyle = TextStyle(color: Theme.of(context).primaryColor);
     final snackBar = Flushbar(
       margin: EdgeInsets.only(left: 8, right: 8, bottom: 8),
       borderRadius: 4,
@@ -422,7 +410,7 @@ class NoteScreenState extends State<NoteScreen> {
               style: textStyle,
             ),
       mainButton: FlatButton(
-        color: Colors.white,
+        color: Theme.of(context).primaryColor,
         child: Text(
           'Annuler',
         ),
@@ -470,7 +458,7 @@ class NoteScreenState extends State<NoteScreen> {
                 child: Text(
                   'Oui',
                 ),
-                textColor: Colors.deepPurpleAccent,
+                textColor: Theme.of(context).accentColor,
               ),
             ],
           );
